@@ -16,8 +16,7 @@ unsigned short calculateChecksum(void *packet, int len) {
     return result;
 }
 
-struct icmphdr *craftIcmpPackage() {
-    static u_int16_t seqId = 0;
+struct icmphdr *craftIcmpPackage(u_int16_t seqId) {
     struct icmphdr *packet;
     packet = malloc(sizeof(struct icmphdr));
     // Store in raw bytes but trick the compiler to treat as struct

@@ -1,5 +1,14 @@
 #include "./ft_ping.h"
 
+struct pingStat {
+    double min;
+    double avg;
+    double max;
+    double stddev;
+    double total;
+    double totalsq;
+};
+
 static volatile int keepRunning = 1;
 
 void intHandler(int dummy) {
@@ -7,46 +16,15 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
-struct addrinfo* getDest(char* host) {
-    struct addrinfo* result;
-    struct addrinfo hints; // Wanted address type (IPv4)
-    int error;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_RAW;
-    hints.ai_protocol = IPPROTO_ICMP;
-    /* resolve the domain name into a list of addresses */
-    error = getaddrinfo(host, NULL, &hints, &result);
-    if (error != 0) {
-        fprintf(stderr, "ft_ping: %s: %s\n", host, gai_strerror(error));
-        return (NULL);
-    }
-    return (result);
-
-    // REVERSE DNS DEAD CODE
-    // /* loop over all returned results and do inverse lookup */
-    // for (res = result; res != NULL; res = res->ai_next) {   
-    //     char hostname[NI_MAXHOST];
-    //     error = getnameinfo(res->ai_addr, res->ai_addrlen, hostname, NI_MAXHOST, NULL, 0, 0); 
-    //     if (error != 0) {
-    //         fprintf(stderr, "error in getnameinfo: %s\n", gai_strerror(error));
-    //         continue;
-    //     }
-    //     if (*hostname != '\0')
-    //         printf("hostname: %s\n", hostname);
-    // }
-}
-
 int openSocket() {
     int sock;
-    int ttl = 1;
+    int ttl = 201;
 
     sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sock == -1) {
         return (sock);
     }
-    if (setsockopt(sock, SOL_IP, IP_TTL, &ttl, sizeof(ttl)) != 0) {
+    if (setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) != 0) {
         // printf("\nSetting socket options to TTeL failed!\n");
         return (1);
     } else {
@@ -55,23 +33,106 @@ int openSocket() {
     return (sock);
 }
 
-void print_hex(const char *data, size_t length) {
-    for (size_t i = 0; i < length; i++) {
-        printf("%02X ", (unsigned char)data[i]);
+int receive(int sock) {
+    int responseLen;
+    char rbuf[1024];
+    struct sockaddr_in rAddr;
+    socklen_t rAddrLen = sizeof(rAddr);
+    struct iphdr *ip_header;
+    int iphdrlen;
+    struct icmphdr *icmp_response;
+    struct icmphdr *icmp_req = NULL;
+
+    memset(rbuf, 0, sizeof(rbuf));
+    responseLen = recvfrom(
+        sock,
+        rbuf,
+        sizeof(rbuf),
+        0,
+        (struct sockaddr*)&rAddr,
+        &rAddrLen
+    );
+    if (responseLen <= 0) {
+        perror("No response received or error");
+        return (1);
+    } else {
+        // Parse the IP and ICMP headers
+        ip_header = (struct iphdr*) rbuf;
+        iphdrlen = ip_header->ihl << 2;
+        icmp_response = (struct icmphdr*) (rbuf + iphdrlen);
+
+        printf(
+            "%s %d bytes  from %s\n",
+            icmp_response->type == ICMP_ECHOREPLY ? "✅" : "❌",
+            responseLen,
+            inet_ntoa(rAddr.sin_addr)
+        );
+        // Check if it's an ICMP Echo Reply
+        if (icmp_response->type != ICMP_ECHOREPLY) {
+            print_icmp_code(icmp_response->type, icmp_response->code, "");
+            icmp_req = (struct icmphdr*)(rbuf + 8 + iphdrlen * 2);
+            printf("REQ: \n");
+            debugIcmp(icmp_req);
+            printf("\n");
+        }
+        printf("RESP: \n");
+        debugIcmp(icmp_response);
     }
-    printf("\n");
+    return (0);
 }
 
+void saveStat(
+    struct timeval* beforeTv,
+    struct timeval* afterTv,
+    struct pingStat *pStat,
+    u_int16_t seqId
+) {
+    double beforeMicroSec = (
+        beforeTv->tv_sec * 1000000 + beforeTv->tv_usec
+    );
+    double afterMicroSec = (
+        afterTv->tv_sec * 1000000 + afterTv->tv_usec
+    );
+    double diffMsSec = (afterMicroSec - beforeMicroSec);
+    printf("After: [%f], before: [%f], diff : %.3f\n", afterMicroSec, beforeMicroSec, diffMsSec);
+    pStat->total += diffMsSec;
+    pStat->totalsq += diffMsSec*diffMsSec;
+    if (seqId == 0) {
+        pStat->avg = pStat->total;
+    } else {
+        pStat->avg = pStat->total / (double)seqId;
+    }
+    if (pStat->min == 0 || pStat->min > diffMsSec) {
+        pStat->min = diffMsSec;
+    }
+    if (pStat->max == 0 || pStat->max < diffMsSec) {
+        pStat->max = diffMsSec;
+    }
+    printf("stddev[%f]\n", pStat->stddev);
+    pStat->stddev = pStat->totalsq / pStat->total - pStat->avg * pStat->avg;
+}
+
+void printPingStats(struct pingStat *pStat) {
+    printf ("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+	      pStat->min / 1000, pStat->avg / 1000, pStat->max / 1000, nsqrt (pStat->stddev, 0.0005));
+}
 
 int ft_ping(bool isVerbose, char* host) {
     struct addrinfo* destInfo;
     struct icmphdr* packet;
     struct sockaddr_in destAddr;
     int sock;
-    char rbuf[1024];
-    struct sockaddr_in rAddr;
-    socklen_t rAddrLen = sizeof(rAddr);
+    struct timeval beforeTv;
+    struct timeval afterTv;
+    struct pingStat pStat;
+    u_int16_t seqId;
 
+    seqId = 0;
+    pStat.min = 0;
+    pStat.avg = 0;
+    pStat.max = 0;
+    pStat.stddev = 0;
+    pStat.total = 0;
     signal(SIGINT, intHandler);
     printf("isVerbose %d, Host: %s\n", isVerbose, host);
     // Try a DNS resolution
@@ -89,7 +150,7 @@ int ft_ping(bool isVerbose, char* host) {
         return (1);
     }
     while (keepRunning) {
-        packet = craftIcmpPackage();
+        packet = craftIcmpPackage(seqId);
         printf(
             "seqId = %d, Pid = %d, Checksum = %d\n",
             ntohs(packet->un.echo.sequence),
@@ -97,6 +158,7 @@ int ft_ping(bool isVerbose, char* host) {
             packet->checksum
         );
         fflush(stdout);
+        gettimeofday(&beforeTv, NULL);
         if (
             sendto(
                 sock,
@@ -108,34 +170,17 @@ int ft_ping(bool isVerbose, char* host) {
             ) <= 0
         ) {
             perror("ft_ping: ");
-        }
-        int responseLen;
-        fflush(stdout);
-        memset(rbuf, 0, sizeof(rbuf));
-        responseLen = recvfrom(sock, rbuf, sizeof(rbuf), 0, (struct sockaddr*)&rAddr, &rAddrLen);
-        fflush(stdout);
-        if (responseLen <= 0) {
-            perror("No response received or error");
         } else {
-            // Parse the IP and ICMP headers
-            struct iphdr *ip_header = (struct iphdr*) rbuf;
-            struct icmphdr *icmp_response = (struct icmphdr*) (rbuf+ (ip_header->ihl << 2));
-
-            print_hex(rbuf, responseLen);
-            // Check if it's an ICMP Echo Reply
-            if (icmp_response->type == ICMP_EXC_TTL) {
-                printf("%d bytes ✅ from %s\n", responseLen, inet_ntoa(rAddr.sin_addr));
-            } else {
-                printf("%d bytes ❌ from %s\n", responseLen, inet_ntoa(rAddr.sin_addr));
+            if (receive(sock) == 0) {
+                gettimeofday(&afterTv, NULL);
+                saveStat(&beforeTv, &afterTv, &pStat, seqId + 1);
             }
-            printf("type: %u, ", ntohs(icmp_response->type));
-            printf("code: %u, ", ntohs(icmp_response->code));
-            printf("id: %d, ", ntohs(icmp_response->un.echo.id));
-            printf("seq: %d\n", ntohs(icmp_response->un.echo.sequence));
         }
         sleep(1);
         free(packet);
+        seqId++;
     }
+    printPingStats(&pStat);
     freeaddrinfo(destInfo);
     close(sock);
     return (0);

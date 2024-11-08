@@ -2,6 +2,7 @@ NAME		=	ft_ping
 
 SRCS		=	./main.c			\
 				./icmp.c 			\
+				./utils.c			\
 				./ft_ping.c
 
 CC			=	gcc
