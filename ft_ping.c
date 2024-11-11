@@ -33,7 +33,7 @@ int openSocket() {
     return (sock);
 }
 
-int receive(int sock) {
+int receive(int sock, u_int16_t seqId) {
     int responseLen;
     char rbuf[1024];
     struct sockaddr_in rAddr;
@@ -62,21 +62,21 @@ int receive(int sock) {
         icmp_response = (struct icmphdr*) (rbuf + iphdrlen);
 
         printf(
-            "%s %d bytes  from %s\n",
-            icmp_response->type == ICMP_ECHOREPLY ? "✅" : "❌",
+            "%d bytes from %s: icmp_seq=%d ttl=%d ",
             responseLen,
-            inet_ntoa(rAddr.sin_addr)
+            inet_ntoa(rAddr.sin_addr),
+            seqId,
+            ip_header->ttl
         );
         // Check if it's an ICMP Echo Reply
         if (icmp_response->type != ICMP_ECHOREPLY) {
+            printf("❌❌❌❌❌❌❌");
             print_icmp_code(icmp_response->type, icmp_response->code, "");
             icmp_req = (struct icmphdr*)(rbuf + 8 + iphdrlen * 2);
             printf("REQ: \n");
             debugIcmp(icmp_req);
             printf("\n");
         }
-        printf("RESP: \n");
-        debugIcmp(icmp_response);
     }
     return (0);
 }
@@ -88,13 +88,12 @@ void saveStat(
     u_int16_t seqId
 ) {
     double beforeMicroSec = (
-        beforeTv->tv_sec * 1000000 + beforeTv->tv_usec
+        ((double)beforeTv->tv_sec * 1000 + beforeTv->tv_usec) / 1000
     );
     double afterMicroSec = (
-        afterTv->tv_sec * 1000000 + afterTv->tv_usec
+        ((double)afterTv->tv_sec * 1000 + afterTv->tv_usec) / 1000
     );
     double diffMsSec = (afterMicroSec - beforeMicroSec);
-    printf("After: [%f], before: [%f], diff : %.3f\n", afterMicroSec, beforeMicroSec, diffMsSec);
     pStat->total += diffMsSec;
     pStat->totalsq += diffMsSec*diffMsSec;
     if (seqId == 0) {
@@ -108,13 +107,13 @@ void saveStat(
     if (pStat->max == 0 || pStat->max < diffMsSec) {
         pStat->max = diffMsSec;
     }
-    printf("stddev[%f]\n", pStat->stddev);
-    pStat->stddev = pStat->totalsq / pStat->total - pStat->avg * pStat->avg;
+    printf("time=%.3f ms\n", diffMsSec);
+    pStat->stddev = pStat->totalsq / (double)seqId - pStat->avg * pStat->avg;
 }
 
 void printPingStats(struct pingStat *pStat) {
     printf ("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
-	      pStat->min / 1000, pStat->avg / 1000, pStat->max / 1000, nsqrt (pStat->stddev, 0.0005));
+	      pStat->min, pStat->avg, pStat->max, nsqrt (pStat->stddev, 0.0005));
 }
 
 int ft_ping(bool isVerbose, char* host) {
@@ -149,14 +148,14 @@ int ft_ping(bool isVerbose, char* host) {
         freeaddrinfo(destInfo);
         return (1);
     }
+    packet = craftIcmpPackage(seqId);
+    printf(
+        "PING %s (%s): %ld data bytes\n",
+        host,
+        inet_ntoa(destAddr.sin_addr),
+        sizeof(struct icmphdr)
+    );
     while (keepRunning) {
-        packet = craftIcmpPackage(seqId);
-        printf(
-            "seqId = %d, Pid = %d, Checksum = %d\n",
-            ntohs(packet->un.echo.sequence),
-            ntohs(packet->un.echo.id),
-            packet->checksum
-        );
         fflush(stdout);
         gettimeofday(&beforeTv, NULL);
         if (
@@ -171,7 +170,7 @@ int ft_ping(bool isVerbose, char* host) {
         ) {
             perror("ft_ping: ");
         } else {
-            if (receive(sock) == 0) {
+            if (receive(sock, seqId) == 0) {
                 gettimeofday(&afterTv, NULL);
                 saveStat(&beforeTv, &afterTv, &pStat, seqId + 1);
             }
@@ -179,6 +178,7 @@ int ft_ping(bool isVerbose, char* host) {
         sleep(1);
         free(packet);
         seqId++;
+        packet = craftIcmpPackage(seqId);
     }
     printPingStats(&pStat);
     freeaddrinfo(destInfo);

@@ -99,26 +99,30 @@ struct addrinfo* getDest(char* host) {
 }
 
 
-static double nabs (double a)
-{
-  return (a < 0) ? -a : a;
+static double nabs(double a) {
+    if (a < 0) {
+        return (a);
+    } else {
+        return (a * -1);
+    }
 }
 
-double nsqrt (double a, double prec)
-{
-  double x0, x1;
+double nsqrt(double a, double prec) {
+    double x0;
+    double x1;
 
-  if (a < 0)
-    return 0;
-  if (a < prec)
-    return 0;
-  x1 = a / 2;
-  do
-    {
-      x0 = x1;
-      x1 = (x0 + a / x0) / 2;
+    if (a < 0) {
+        return 0;
     }
-  while (nabs (x1 - x0) > prec);
-
-  return x1;
+    if (a < prec) {
+        return 0;
+    }
+    x1 = a / 2;
+    x0 = x1;
+    while (nabs (x1 - x0) > prec)
+    {
+        x0 = x1;
+        x1 = (x0 + a / x0) / 2;
+    }
+    return x1;
 }
