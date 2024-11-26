@@ -33,31 +33,32 @@ int ft_ping(bool isVerbose, char* host) {
         freeaddrinfo(destInfo);
         return (1);
     }
-    // Init time structures
-    gettimeofday(&lastRecvTv, NULL);
-    gettimeofday(&lastSendTv, NULL);
     // Init global data structure
     initPingStruct(&ping, host);
     // Craft first packet
     packet = craftIcmpPackage(&ping);
     printWelcome(host, &destAddr);
+    // Init time structures
+    gettimeofday(&lastRecvTv, NULL);
+    gettimeofday(&lastSendTv, NULL);
     // LOOP
     while (keepRunning) {
         // IF I SENDED FROM AT LEAST 1000ms
         if (isTimeElapsed(&lastSendTv, 1000) == true) {
-        //      SEND
-                sendPacket(&ping, packet, &destAddr);
-                fflush(stdout);
-                ping.seqId += 1;
-                gettimeofday(&lastSendTv, NULL);
+            //  SEND
+            sendPacket(&ping, packet, &destAddr);
+            ping.seqId += 1;
+            gettimeofday(&lastSendTv, NULL);
         }
-        if (selectSock(ping.sock, &timeout) > 0) {
+        if (selectSock(ping.sock, &timeout) == 1) {
             // RECEIVE
-            receive(&ping);
+            if (receive(&ping) == -1) {
+                continue;
+            }
             // MEASURE TIME
             gettimeofday(&receivedTv, NULL);
             // STORE TIME
-            saveStat(&lastRecvTv, &receivedTv, &ping);
+            saveStat(&lastSendTv, &receivedTv, &ping);
             // RESET LAST
             gettimeofday(&lastRecvTv, NULL);
             ping.nRecv += 1;

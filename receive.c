@@ -27,7 +27,10 @@ int receive(struct Ping* ping) {
         ip_header = (struct iphdr*) rbuf;
         iphdrlen = ip_header->ihl << 2;
         icmp_response = (struct icmphdr*) (rbuf + iphdrlen);
-
+        // FILTER ECHO RESPONSE FROM LOCAL PROCESS
+        if (ntohs(icmp_response->un.echo.id) != ping->id) {
+            return (-1);
+        }
         printf(
             "%d bytes from %s: icmp_seq=%d ttl=%d ",
             responseLen,

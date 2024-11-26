@@ -96,13 +96,13 @@ void initPingStruct(struct Ping* ping, char* host) {
 // Return true if
 bool isTimeElapsed(struct timeval* source, uint16_t timeInMs) {
     struct timeval now;
-    long long nowMicroSec;
-    long long sourceMicroSec;
-    long long diffMicroSec;
+    double nowMicroSec;
+    double sourceMicroSec;
+    double diffMicroSec;
 
     gettimeofday(&now, NULL);
-    nowMicroSec = (long long)now.tv_sec * 1000000 + now.tv_usec;
-    sourceMicroSec = (long long)source->tv_sec * 1000000 + source->tv_usec;
+    nowMicroSec = (double)now.tv_sec * 1000000 + now.tv_usec;
+    sourceMicroSec = (double)source->tv_sec * 1000000 + source->tv_usec;
     diffMicroSec = (nowMicroSec - sourceMicroSec);
     fflush(stdout);
     return (diffMicroSec / 1000 > timeInMs);
@@ -117,8 +117,8 @@ int selectSock(int sock, struct timeval* timeout) {
     FD_SET(sock, &readfds);  // Monitor standard input (fd = 0)
 
     // Set a timeout of 5 seconds
-    timeout->tv_sec = 1;
-    timeout->tv_usec = 0;
+    timeout->tv_sec = 0;
+    timeout->tv_usec = 10;
 
     // Block no signals (sigmask = empty set)
     // sigemptyset(&sigmask);
@@ -194,14 +194,14 @@ void saveStat(
     struct Ping *ping
 ) {
     double beforeMicroSec = (
-        ((double)beforeTv->tv_sec * 1000 + beforeTv->tv_usec) / 1000
+        (double)beforeTv->tv_sec * 1000000 + beforeTv->tv_usec
     );
     double afterMicroSec = (
-        ((double)afterTv->tv_sec * 1000 + afterTv->tv_usec) / 1000
+        (double)afterTv->tv_sec * 1000000 + afterTv->tv_usec
     );
-    double diffMsSec = (afterMicroSec - beforeMicroSec);
+    double diffMsSec = (afterMicroSec - beforeMicroSec) / 1000;
     ping->total += diffMsSec;
-    ping->totalsq += diffMsSec*diffMsSec;
+    ping->totalsq += diffMsSec * diffMsSec;
     if (ping->seqId == 0) {
         ping->avg = ping->total;
     } else {
