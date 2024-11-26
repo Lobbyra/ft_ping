@@ -81,7 +81,8 @@ void printWelcome(char* host, struct sockaddr_in* destAddr) {
     );
 }
 
-void initPingStruct(struct Ping *ping) {
+void initPingStruct(struct Ping* ping, char* host) {
+    ping->host = host;
     ping->min = 0;
     ping->avg = 0;
     ping->max = 0;
@@ -89,6 +90,7 @@ void initPingStruct(struct Ping *ping) {
     ping->total = 0;
     ping->id = getpid();
     ping->seqId = 0;
+    ping->nRecv = 0;
 }
 
 // Return true if
@@ -189,7 +191,6 @@ void print_hex(const char *data, size_t length) {
 void saveStat(
     struct timeval* beforeTv,
     struct timeval* afterTv,
-    struct timeval* timeout,
     struct Ping *ping
 ) {
     double beforeMicroSec = (
@@ -198,10 +199,7 @@ void saveStat(
     double afterMicroSec = (
         ((double)afterTv->tv_sec * 1000 + afterTv->tv_usec) / 1000
     );
-    double timeoutMicroSec = 1000 - (
-        ((double)timeout->tv_sec * 1000 + timeout->tv_usec) / 1000
-    );
-    double diffMsSec = (afterMicroSec - beforeMicroSec - timeoutMicroSec);
+    double diffMsSec = (afterMicroSec - beforeMicroSec);
     ping->total += diffMsSec;
     ping->totalsq += diffMsSec*diffMsSec;
     if (ping->seqId == 0) {
@@ -250,6 +248,20 @@ double nsqrt(double a, double prec) {
 }
 
 void printPingStats(struct Ping *ping) {
-    printf ("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
-	      ping->min, ping->avg, ping->max, nsqrt (ping->stddev, 0.0005));
+    printf("--- %s ping statistics ---\n", ping->host);
+    if (ping->nRecv > 0) {
+        printf (
+            "round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+            ping->min,
+            ping->avg,
+            ping->max,
+            nsqrt (ping->stddev, 0.0005)
+        );
+    }
+    printf(
+        "%d packets transmitted, %d packets received, %d%% packet loss\n",
+        ping->seqId,
+        ping->nRecv,
+        100 - ((ping->nRecv * 100) / ping->seqId)
+    );
 }

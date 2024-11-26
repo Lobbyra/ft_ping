@@ -37,7 +37,7 @@ int ft_ping(bool isVerbose, char* host) {
     gettimeofday(&lastRecvTv, NULL);
     gettimeofday(&lastSendTv, NULL);
     // Init global data structure
-    initPingStruct(&ping);
+    initPingStruct(&ping, host);
     // Craft first packet
     packet = craftIcmpPackage(&ping);
     printWelcome(host, &destAddr);
@@ -57,9 +57,10 @@ int ft_ping(bool isVerbose, char* host) {
             // MEASURE TIME
             gettimeofday(&receivedTv, NULL);
             // STORE TIME
-            saveStat(&lastRecvTv, &receivedTv, &timeout, &ping);
+            saveStat(&lastRecvTv, &receivedTv, &ping);
             // RESET LAST
             gettimeofday(&lastRecvTv, NULL);
+            ping.nRecv += 1;
         }
     }
     // END

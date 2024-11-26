@@ -38,6 +38,7 @@ void printWelcome(char* host, struct sockaddr_in* destAddr);
 int ft_ping(bool isVerbose, char *host);
 
 struct Ping {
+    char *host;
     double min; // Minimum diff
     double avg; // Average diff
     double max; // Max diff
@@ -47,12 +48,13 @@ struct Ping {
     int seqId; // Xth packet sended
     pid_t id; // Id of the sender, here the pid of the program
     int sock; // ICMP socket
+    int nRecv; // Number of received packets
 };
 
 // icmp.h
 struct icmphdr *craftIcmpPackage(struct Ping *ping);
 struct addrinfo* getDest(char* host);
-void initPingStruct(struct Ping *ping);
+void initPingStruct(struct Ping* ping, char *host);
 bool isTimeElapsed(struct timeval* source, uint16_t timeInMs);
 int selectSock(int sock, struct timeval* timeout);
 int receive(struct Ping* ping);
@@ -71,7 +73,6 @@ void print_hex(const char *data, size_t length);
 void saveStat(
     struct timeval* beforeTv,
     struct timeval* afterTv,
-    struct timeval* timeout,
     struct Ping *ping
 );
 void printPingStats(struct Ping *ping);
