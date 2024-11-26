@@ -8,7 +8,6 @@ int receive(struct Ping* ping) {
     struct iphdr *ip_header;
     int iphdrlen;
     struct icmphdr *icmp_response;
-    struct icmphdr *icmp_req = NULL;
 
     memset(rbuf, 0, sizeof(rbuf));
     responseLen = recvfrom(
@@ -38,15 +37,6 @@ int receive(struct Ping* ping) {
             ping->seqId,
             ip_header->ttl
         );
-        // Check if it's an ICMP Echo Reply
-        if (icmp_response->type != ICMP_ECHOREPLY) {
-            printf("❌❌❌❌❌❌❌");
-            print_icmp_code(icmp_response->type, icmp_response->code, "");
-            icmp_req = (struct icmphdr*)(rbuf + 8 + iphdrlen * 2);
-            printf("REQ: \n");
-            debugIcmp(icmp_req);
-            printf("\n");
-        }
     }
     return (0);
 }

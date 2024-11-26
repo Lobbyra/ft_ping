@@ -25,17 +25,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 
-// UTILS.c
-int openSocket();
-// void print_hex(const char *data, size_t length);
-// void print_icmp_code (int type, int code, char *prefix);
-// void debugIcmp(struct icmphdr *i);
-// struct addrinfo* getDest(char* host);
-// double nsqrt (double a, double prec);
-void setDestAddr(struct sockaddr_in* destAddr, struct addrinfo* destInfo);
-void printWelcome(char* host, struct sockaddr_in* destAddr);
-
-int ft_ping(bool isVerbose, char *host);
+#define ZERO_DIV_PROTECTOR | 1
 
 struct Ping {
     char *host;
@@ -51,31 +41,41 @@ struct Ping {
     int nRecv; // Number of received packets
 };
 
-// icmp.h
-struct icmphdr *craftIcmpPackage(struct Ping *ping);
-struct addrinfo* getDest(char* host);
-void initPingStruct(struct Ping* ping, char *host);
-bool isTimeElapsed(struct timeval* source, uint16_t timeInMs);
-int selectSock(int sock, struct timeval* timeout);
-int receive(struct Ping* ping);
+#define ONE_SEC_MS 1000
 
+// GLOBAL
+int ft_ping(bool isVerbose, char *host);
 int sendPacket(
     struct Ping* ping,
     struct icmphdr* packet,
     struct sockaddr_in *destAddr
 );
-void print_icmp_code(int type, int code, char *prefix);
-void debugIcmp(struct icmphdr *i);
-void print_hex(const char *data, size_t length);
-
-#define NITEMS(a) sizeof(a)/sizeof((a)[0])
-
+int receive(struct Ping* ping);
 void saveStat(
     struct timeval* beforeTv,
     struct timeval* afterTv,
     struct Ping *ping
 );
+
+// UTILS
+bool isTimeElapsed(struct timeval* source, uint16_t timeInMs);
+void printWelcome(
+    struct Ping* ping,
+    struct sockaddr_in* destAddr,
+    bool isVerbose
+);
 void printPingStats(struct Ping *ping);
+
+// NETWORK
+int selectSock(int sock);
+int openSocket();
+void setDestAddr(struct sockaddr_in* destAddr, struct addrinfo* destInfo);
+struct addrinfo* getDest(char* host);
+
+// ICMP
+struct icmphdr *craftIcmpPackage(struct Ping *ping);
+void initPingStruct(struct Ping* ping, char *host);
+
 
 
 #endif

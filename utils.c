@@ -72,13 +72,21 @@ void setDestAddr(struct sockaddr_in* destAddr, struct addrinfo* destInfo) {
     destAddr->sin_addr = ((struct sockaddr_in*)destInfo->ai_addr)->sin_addr;
 }
 
-void printWelcome(char* host, struct sockaddr_in* destAddr) {
+void printWelcome(
+    struct Ping* ping,
+    struct sockaddr_in* destAddr,
+    bool isVerbose
+) {
     printf(
-        "PING %s (%s): %ld data bytes\n",
-        host,
+        "PING %s (%s): %ld data bytes",
+        ping->host,
         inet_ntoa(destAddr->sin_addr),
         sizeof(struct icmphdr)
     );
+    if (isVerbose == true) {
+        printf (", id 0x%04x = %u", ping->id, ping->id);
+    }
+    printf("\n");
 }
 
 void initPingStruct(struct Ping* ping, char* host) {
@@ -108,84 +116,21 @@ bool isTimeElapsed(struct timeval* source, uint16_t timeInMs) {
     return (diffMicroSec / 1000 > timeInMs);
 }
 
-int selectSock(int sock, struct timeval* timeout) {
+int selectSock(int sock) {
     fd_set readfds;
-    // sigset_t sigmask;
+    struct timespec timeout;
+    sigset_t sigmask;
 
     // Initialize the file descriptor set
     FD_ZERO(&readfds);
-    FD_SET(sock, &readfds);  // Monitor standard input (fd = 0)
+    FD_SET(sock, &readfds);
 
-    // Set a timeout of 5 seconds
-    timeout->tv_sec = 0;
-    timeout->tv_usec = 10;
+    // Set a minimal time out just to get the readiness of socker reading
+    timeout.tv_sec = 0;
+    timeout.tv_nsec = 1;
 
-    // Block no signals (sigmask = empty set)
-    // sigemptyset(&sigmask);
-    return (select(sock + 1, &readfds, NULL, NULL, timeout));
-}
-
-struct icmp_code_descr
-{
-  int type;
-  int code;
-  char *diag;
-} icmp_code_descr[] = {
-    {ICMP_DEST_UNREACH, ICMP_NET_UNREACH, "Destination Net Unreachable"},
-    {ICMP_DEST_UNREACH, ICMP_HOST_UNREACH, "Destination Host Unreachable"},
-    {ICMP_DEST_UNREACH, ICMP_PROT_UNREACH, "Destination Protocol Unreachable"},
-    {ICMP_DEST_UNREACH, ICMP_PORT_UNREACH, "Destination Port Unreachable"},
-    {ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED, "Fragmentation needed and DF set"},
-    {ICMP_DEST_UNREACH, ICMP_SR_FAILED, "Source Route Failed"},
-    {ICMP_DEST_UNREACH, ICMP_NET_UNKNOWN, "Network Unknown"},
-    {ICMP_DEST_UNREACH, ICMP_HOST_UNKNOWN, "Host Unknown"},
-    {ICMP_DEST_UNREACH, ICMP_HOST_ISOLATED, "Host Isolated"},
-    {
-        ICMP_DEST_UNREACH, ICMP_NET_UNR_TOS,
-        "Destination Network Unreachable At This TOS"
-    },
-    {
-        ICMP_DEST_UNREACH, ICMP_HOST_UNR_TOS,
-        "Destination Host Unreachable At This TOS"
-    },
-    {ICMP_REDIRECT, ICMP_REDIR_NET, "Redirect Network"},
-    {ICMP_REDIRECT, ICMP_REDIR_HOST, "Redirect Host"},
-    {ICMP_REDIRECT, ICMP_REDIR_NETTOS, "Redirect Type of Service and Network"},
-    {ICMP_REDIRECT, ICMP_REDIR_HOSTTOS, "Redirect Type of Service and Host"},
-    {ICMP_TIME_EXCEEDED, ICMP_EXC_TTL, "Time to live exceeded"},
-    {ICMP_TIME_EXCEEDED, ICMP_EXC_FRAGTIME, "Frag reassembly time exceeded"}
-};
-
-void print_icmp_code(int type, int code, char *prefix) {
-    struct icmp_code_descr *p;
-
-    for (
-        p = icmp_code_descr;
-        p < icmp_code_descr + NITEMS (icmp_code_descr);
-        p++
-    ) {
-        if (p->type == type && p->code == code) {
-            printf("%s\n", p->diag);
-            return;
-        }
-    }
-    printf("%s, Unknown Code: %d\n", prefix, code);
-}
-
-void debugIcmp(struct icmphdr *i) {
-    printf("type: %d, ", i->type);
-    printf("code: %d, ", i->code);
-    printf("id: %d, ", ntohs(i->un.echo.id));
-    printf("seq: %d\n", ntohs(i->un.echo.sequence));
-    printf("ICMP dump: \n");
-    print_hex((char*)(i), 8);
-}
-
-void print_hex(const char *data, size_t length) {
-    for (size_t i = 0; i < length; i++) {
-        printf("%02X ", (unsigned char)data[i]);
-    }
-    printf("\n");
+    sigemptyset(&sigmask);
+    return (pselect(sock + 1, &readfds, NULL, NULL, &timeout, &sigmask));
 }
 
 void saveStat(
@@ -216,8 +161,6 @@ void saveStat(
     printf("time=%.3f ms\n", diffMsSec);
     ping->stddev = ping->totalsq / (double)ping->seqId - ping->avg * ping->avg;
 }
-
-
 
 static double nabs(double a) {
     if (a < 0) {
@@ -262,6 +205,6 @@ void printPingStats(struct Ping *ping) {
         "%d packets transmitted, %d packets received, %d%% packet loss\n",
         ping->seqId,
         ping->nRecv,
-        100 - ((ping->nRecv * 100) / ping->seqId)
+        100 - ((ping->nRecv * 100) / (ping->seqId ZERO_DIV_PROTECTOR))
     );
 }

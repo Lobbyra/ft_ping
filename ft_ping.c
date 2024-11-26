@@ -11,11 +11,9 @@ int ft_ping(bool isVerbose, char* host) {
     struct addrinfo* destInfo;
     struct sockaddr_in destAddr;
     struct icmphdr* packet;
-    struct timeval lastRecvTv; // Last received packet time
     struct timeval receivedTv; // Time at packet reception
     struct timeval lastSendTv; // Time when the last packet was send
-    struct Ping ping;
-    struct timeval timeout; // Select timeout
+    struct Ping ping; // Wrap of many ping info
 
     // INIT
     (void)isVerbose;
@@ -37,20 +35,19 @@ int ft_ping(bool isVerbose, char* host) {
     initPingStruct(&ping, host);
     // Craft first packet
     packet = craftIcmpPackage(&ping);
-    printWelcome(host, &destAddr);
+    printWelcome(&ping, &destAddr, isVerbose);
     // Init time structures
-    gettimeofday(&lastRecvTv, NULL);
     gettimeofday(&lastSendTv, NULL);
     // LOOP
     while (keepRunning) {
         // IF I SENDED FROM AT LEAST 1000ms
-        if (isTimeElapsed(&lastSendTv, 1000) == true) {
+        if (isTimeElapsed(&lastSendTv, ONE_SEC_MS) == true || ping.seqId == 0) {
             //  SEND
             sendPacket(&ping, packet, &destAddr);
             ping.seqId += 1;
             gettimeofday(&lastSendTv, NULL);
         }
-        if (selectSock(ping.sock, &timeout) == 1) {
+        if (selectSock(ping.sock) == 1) {
             // RECEIVE
             if (receive(&ping) == -1) {
                 continue;
@@ -60,7 +57,6 @@ int ft_ping(bool isVerbose, char* host) {
             // STORE TIME
             saveStat(&lastSendTv, &receivedTv, &ping);
             // RESET LAST
-            gettimeofday(&lastRecvTv, NULL);
             ping.nRecv += 1;
         }
     }
