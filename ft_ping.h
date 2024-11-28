@@ -1,9 +1,5 @@
-
 #ifndef FT_PING_H
 # define FT_PING_H
-
-// Fix some intellinsense issues
-#define __USE_MISC 1
 
 // STD
 #include <time.h>
@@ -23,9 +19,18 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+#include "./structures.h"
 
 #define LOOP_DURATION_IN_SEC 1
+#define DEFAULT_TTL 255
 
 int ft_ping(bool isVerbose, char* host);
+
+int sendPacket(
+    const struct s_destInfo* destInfo,
+    const pid_t pid,
+    const size_t seqId
+);
+int getDestInfo(char* host, struct s_destInfo* destInfo);
 
 #endif

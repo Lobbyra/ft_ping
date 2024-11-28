@@ -21,15 +21,25 @@ static void initSignals() {
 }
 
 int ft_ping(bool isVerbose, char* host) {
+    struct s_destInfo destInfo;
+    size_t seqId = 0;
+    const pid_t pid = getpid();
+
     initSignals();
+    (void)isVerbose;
+    if (getDestInfo(host, &destInfo) != 0) {
+        return (1);
+    }
     while (pingState != STOP) {
         if (pingState == SEND) {
-            printf("SEND\n");
+            printf("SEND to %s\n", inet_ntoa(destInfo.addr.sin_addr));
             fflush(stdout);
+            sendPacket(&destInfo, pid, seqId);
             pingState = RECEIVE;
         } else if (pingState == RECEIVE) {
             pause();
         }
     }
+    freeaddrinfo(destInfo.info);
     return (0);
 }
