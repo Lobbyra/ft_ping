@@ -1,9 +1,6 @@
 NAME		=	ft_ping
 
 SRCS		=	./main.c			\
-				./utils.c			\
-				./sendPacket.c		\
-				./receive.c			\
 				./ft_ping.c
 
 CC			=	gcc
