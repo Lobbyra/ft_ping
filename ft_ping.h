@@ -29,8 +29,13 @@ int ft_ping(bool isVerbose, char* host);
 int sendPacket(
     const struct s_destInfo* destInfo,
     const pid_t pid,
-    const size_t seqId
+    const uint16_t seqId
 );
 int getDestInfo(char* host, struct s_destInfo* destInfo);
+int receivePacket(const int sockfd, const pid_t pid, const uint16_t seqId);
+
+double getMsDiff(struct timeval *tv1, struct timeval *tv2);
+unsigned short calculateChecksum(unsigned char *addr, int len);
+void print_hex(const char *data, size_t length);
 
 #endif

@@ -9,10 +9,7 @@ static int openSocket() {
         return (sock);
     }
     if (setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) != 0) {
-        // printf("\nSetting socket options to TTeL failed!\n");
         return (1);
-    } else {
-        // printf("\nSocket set to TTL...\n");
     }
     return (sock);
 }

@@ -6,40 +6,62 @@ enum e_pingState pingState = SEND;
 void interuptHandler() { pingState = STOP; };
 void alarmHandler() { pingState = SEND; };
 
-static void initSignals() {
+static int initSignals() {
     struct itimerval timer;
+    struct sigaction saALRM;
+    struct sigaction saINT;
 
-    // SET SIGNAL HANDLER
-    signal(SIGALRM, alarmHandler);
-    signal(SIGINT, interuptHandler);
+    // Register the SIGALRM handler
+    saALRM.sa_handler = alarmHandler;
+    saALRM.sa_flags = 0;
+    sigemptyset(&saALRM.sa_mask);
+    if (sigaction(SIGALRM, &saALRM, NULL) == -1) {
+        perror("sigaction");
+        return (1);
+    }
+    // Register the SIGINT handler
+    saINT.sa_handler = interuptHandler;
+    saINT.sa_flags = 0;
+    sigemptyset(&saINT.sa_mask);
+
+    if (sigaction(SIGINT, &saINT, NULL) == -1) {
+        perror("sigaction");
+        return (1);
+    }
     // SET SIGNAL LOOP
     timer.it_value.tv_sec = LOOP_DURATION_IN_SEC;
     timer.it_value.tv_usec = 0;
     timer.it_interval.tv_sec = LOOP_DURATION_IN_SEC;
     timer.it_interval.tv_usec = 0;
-    setitimer(ITIMER_REAL, &timer, NULL);
+    if (setitimer(ITIMER_REAL, &timer, NULL) == -1) {
+        perror("setitimer");
+        return (1);
+    }
+    return (0);
 }
 
 int ft_ping(bool isVerbose, char* host) {
     struct s_destInfo destInfo;
-    size_t seqId = 0;
+    u_int16_t seqId = 0;
     const pid_t pid = getpid();
 
-    initSignals();
+    if (initSignals() != 0) {
+        return (1);
+    }
     (void)isVerbose;
     if (getDestInfo(host, &destInfo) != 0) {
         return (1);
     }
     while (pingState != STOP) {
         if (pingState == SEND) {
-            printf("SEND to %s\n", inet_ntoa(destInfo.addr.sin_addr));
-            fflush(stdout);
             sendPacket(&destInfo, pid, seqId);
+            seqId++;
             pingState = RECEIVE;
         } else if (pingState == RECEIVE) {
-            pause();
+            receivePacket(destInfo.sockfd, pid, seqId);
         }
     }
+    close(destInfo.sockfd);
     freeaddrinfo(destInfo.info);
     return (0);
 }

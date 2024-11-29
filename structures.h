@@ -14,6 +14,7 @@ struct s_destInfo {
 struct s_ping {
     struct icmphdr header;
     struct timeval sentTimestamp;
+    u_int32_t padding;
 };
 
 struct s_errPing {

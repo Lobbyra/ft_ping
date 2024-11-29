@@ -1,15 +1,17 @@
 NAME		=	ft_ping
 
-SRCS		=	./main.c			\
-				./getDestInfo.c		\
-				./sendPacket.c		\
+SRCS		=	./main.c				\
+				./utils.c			\
+				./getDestInfo.c			\
+				./sendPacket.c			\
+				./receivePacket.c		\
 				./ft_ping.c
 
 CC			=	gcc
 
 OBJS		=	$(SRCS:.c=.o)
 
-CFLAGS		+=	-Wall -Wextra -Werror --std=gnu17 -pthread -I ../lib
+CFLAGS		+=	-Wall -Wextra -Werror -pthread -I ../lib
 
 all			:	$(NAME)
 
