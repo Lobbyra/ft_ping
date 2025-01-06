@@ -24,7 +24,23 @@
 #define LOOP_DURATION_IN_SEC 1
 #define DEFAULT_TTL 255
 
+struct PingStats {
+    int receivedPaquet;
+    char *host;
+    double min; // Minimum diff
+    double avg; // Average diff
+    double max; // Max diff
+    double stddev; // Total variance
+    double total; // Total diff waited 
+    double totalsq; // Total diff squarred used in variance compute
+};
+
 int ft_ping(bool isVerbose, char* host);
+void printPingStats(
+    struct PingStats* pingStats,
+    char* host,
+    u_int16_t seqId
+);
 
 int sendPacket(
     const struct s_destInfo* destInfo,
@@ -32,7 +48,12 @@ int sendPacket(
     const uint16_t seqId
 );
 int getDestInfo(char* host, struct s_destInfo* destInfo);
-int receivePacket(const int sockfd, const pid_t pid, const uint16_t seqId);
+int receivePacket(
+    const int sockfd,
+    const pid_t pid,
+    const uint16_t seqId,
+    struct PingStats *pingStats
+);
 
 double getMsDiff(struct timeval *tv1, struct timeval *tv2);
 unsigned short calculateChecksum(unsigned char *addr, int len);

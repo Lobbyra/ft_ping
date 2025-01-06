@@ -44,7 +44,9 @@ int ft_ping(bool isVerbose, char* host) {
     struct s_destInfo destInfo;
     u_int16_t seqId = 0;
     const pid_t pid = getpid();
+    struct PingStats pingStats;
 
+    memset(&pingStats, 0, sizeof(pingStats));
     if (initSignals() != 0) {
         return (1);
     }
@@ -52,15 +54,27 @@ int ft_ping(bool isVerbose, char* host) {
     if (getDestInfo(host, &destInfo) != 0) {
         return (1);
     }
+    // PRINT WELCOME
+    printf(
+        "PING %s (%s): %ld data bytes",
+        host,
+        inet_ntoa(destInfo.addr.sin_addr),
+        sizeof(struct s_ping)
+    );
+    if (isVerbose == true) {
+        printf (", id 0x%04x = %u", pid, pid);
+    }
+    printf("\n");
     while (pingState != STOP) {
         if (pingState == SEND) {
             sendPacket(&destInfo, pid, seqId);
             seqId++;
             pingState = RECEIVE;
         } else if (pingState == RECEIVE) {
-            receivePacket(destInfo.sockfd, pid, seqId);
+            receivePacket(destInfo.sockfd, pid, seqId, &pingStats);
         }
     }
+    printPingStats(&pingStats, host, seqId);
     close(destInfo.sockfd);
     freeaddrinfo(destInfo.info);
     return (0);

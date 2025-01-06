@@ -34,17 +34,67 @@ unsigned short calculateChecksum(unsigned char *addr, int len)
         *(unsigned char *) &answer = *(unsigned char *) wp;
         sum += answer;
         }
-    printf("before bitswitch: ");
-    print_hex((void*)&sum, sizeof(int));
+    // printf("before bitswitch: ");
+    // print_hex((void*)&sum, sizeof(int));
     sum = (sum >> 16) + (sum & 0xffff);	/* add high 16 to low 16 */
-    printf("after bitswitch: ");
-    print_hex((void*)&sum, sizeof(int));
+    // printf("after bitswitch: ");
+    // print_hex((void*)&sum, sizeof(int));
     sum += (sum >> 16);		/* add carry */
-    printf("A: ");
-    print_hex((void*)&sum, sizeof(int));
+    // printf("A: ");
+    // print_hex((void*)&sum, sizeof(int));
     answer = ~sum;		/* truncate to 16 bits */
-    printf("B: ");
-    print_hex((void*)&sum, sizeof(int));
+    // printf("B: ");
+    // print_hex((void*)&sum, sizeof(int));
     return answer;
 }
 
+static double nabs(double a) {
+    if (a < 0) {
+        return (a);
+    } else {
+        return (a * -1);
+    }
+}
+
+double nsqrt(double a, double prec) {
+    double x0;
+    double x1;
+
+    if (a < 0) {
+        return 0;
+    }
+    if (a < prec) {
+        return 0;
+    }
+    x1 = a / 2;
+    x0 = x1;
+    while (nabs (x1 - x0) > prec)
+    {
+        x0 = x1;
+        x1 = (x0 + a / x0) / 2;
+    }
+    return x1;
+}
+
+void printPingStats(
+    struct PingStats* pingStats,
+    char* host,
+    u_int16_t seqId
+) {
+    printf("--- %s ping statistics ---\n", host);
+    if (pingStats->receivedPaquet > 0) {
+        printf (
+            "round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+            pingStats->min,
+            pingStats->avg,
+            pingStats->max,
+            nsqrt (pingStats->stddev, 0.0005)
+        );
+    }
+    printf(
+        "%d packets transmitted, %d packets received, %d%% packet loss\n",
+        seqId,
+        pingStats->receivedPaquet,
+        100 - ((pingStats->receivedPaquet * 100) / (seqId))
+    );
+}
