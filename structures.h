@@ -26,4 +26,11 @@ struct s_errPing {
     struct s_ping srcPing;
 };
 
+struct icmp_code_descr
+{
+  int type;
+  int code;
+  char *diag;
+};
+
 #endif

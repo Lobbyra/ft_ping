@@ -40,21 +40,12 @@ static int initSignals() {
     return (0);
 }
 
-int ft_ping(bool isVerbose, char* host) {
-    struct s_destInfo destInfo;
-    u_int16_t seqId = 0;
-    const pid_t pid = getpid();
-    struct PingStats pingStats;
-
-    memset(&pingStats, 0, sizeof(pingStats));
-    if (initSignals() != 0) {
-        return (1);
-    }
-    (void)isVerbose;
-    if (getDestInfo(host, &destInfo) != 0) {
-        return (1);
-    }
-    // PRINT WELCOME
+static void printWelcome(
+    const char* host,
+    const struct s_destInfo destInfo,
+    const pid_t pid,
+    const bool isVerbose
+) {
     printf(
         "PING %s (%s): %ld data bytes",
         host,
@@ -65,13 +56,32 @@ int ft_ping(bool isVerbose, char* host) {
         printf (", id 0x%04x = %u", pid, pid);
     }
     printf("\n");
+}
+
+int ft_ping(bool isVerbose, char* host) {
+    struct s_destInfo destInfo;
+    u_int16_t seqId = 0;
+    const pid_t pid = getpid();
+    struct PingStats pingStats;
+
+    memset(&pingStats, 0, sizeof(pingStats));
+    // INIT SIGNALS USED FOR THE LOOP
+    if (initSignals() != 0) {
+        return (1);
+    }
+    // GET THE DEST STRUCT FROM THE HOST STRING
+    if (getDestInfo(host, &destInfo) != 0) {
+        return (1);
+    }
+    printWelcome(host, destInfo, pid, isVerbose);
+    // PING LOOP
     while (pingState != STOP) {
         if (pingState == SEND) {
             sendPacket(&destInfo, pid, seqId);
             seqId++;
             pingState = RECEIVE;
         } else if (pingState == RECEIVE) {
-            receivePacket(destInfo.sockfd, pid, seqId, &pingStats);
+            receivePacket(isVerbose, destInfo.sockfd, pid, seqId, &pingStats);
         }
     }
     printPingStats(&pingStats, host, seqId);

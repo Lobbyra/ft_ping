@@ -19,11 +19,6 @@ static void printSuccResponse(
     fflush(stdout);
 }
 
-static void printErrResponse(char *respBuf) {
-    (void)respBuf;
-    printf("ERROR\n");
-}
-
 static void saveStats(
     struct timeval now,
     struct s_ping* response,
@@ -48,6 +43,7 @@ static void saveStats(
 }
 
 int receivePacket(
+    const bool isVerbose,
     const int sockfd,
     const pid_t pid,
     const uint16_t seqId,
@@ -60,7 +56,6 @@ int receivePacket(
     struct s_ping *response;
     struct iphdr* ipHdr;
     struct timeval now;
-
 
     memset(buf, 0, sizeof(buf));
     recvStatus = recvfrom(
@@ -79,6 +74,7 @@ int receivePacket(
     }
     ipHdr = (struct iphdr*)buf;
     response = (struct s_ping*) (buf + (ipHdr->ihl << 2));
+    // Checksum disabled for skill issue
     // if (
     //     calculateChecksum((void*)response, sizeof(*response)) !=
     //     response->header.checksum
@@ -86,11 +82,15 @@ int receivePacket(
     //     fprintf(stderr, "printf: Received packet checksum failed\n");
     // }
     if (response->header.type == 0) {
+        // IGNORE THE PING RECEIVED IF DOESN'T HAVE THE SAME ID
+        if (ntohs(response->header.un.echo.id) != pid) {
+            return (1);
+        }
         gettimeofday(&now, NULL);
         printSuccResponse(now, &rAddr, ipHdr, response);
         saveStats(now, response, pingStats);
     } else {
-        printErrResponse((char*)buf);
+        printErrResponse(pid, isVerbose, &rAddr, buf, recvStatus);
     }
     (void)pid;
     (void)seqId;

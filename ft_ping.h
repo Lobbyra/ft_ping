@@ -35,6 +35,14 @@ struct PingStats {
     double totalsq; // Total diff squarred used in variance compute
 };
 
+void printErrResponse(
+    const pid_t pid,
+    const bool isVerbose,
+    const struct sockaddr_in *rAddr,
+    const char *buf,
+    const size_t bufSize
+);
+
 int ft_ping(bool isVerbose, char* host);
 void printPingStats(
     struct PingStats* pingStats,
@@ -49,6 +57,7 @@ int sendPacket(
 );
 int getDestInfo(char* host, struct s_destInfo* destInfo);
 int receivePacket(
+    const bool isVerbose,
     const int sockfd,
     const pid_t pid,
     const uint16_t seqId,
