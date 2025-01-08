@@ -16,7 +16,7 @@ static int openSocket() {
 
 int getDestInfo(char* host, struct s_destInfo* destInfo) {
     struct addrinfo* result;
-    struct addrinfo hints; // Wanted address type (IPv4)
+    struct addrinfo hints;
     int error;
 
     memset(destInfo, 0, sizeof(*destInfo));

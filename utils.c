@@ -11,7 +11,6 @@ double getMsDiff(struct timeval *tv1, struct timeval *tv2) {
     return (diffMsSec);
 }
 
-
 void print_hex(const char *data, size_t length) {
     for (size_t i = 0; i < length; i++) {
         printf("%02X ", (unsigned char)data[i]);
@@ -19,32 +18,21 @@ void print_hex(const char *data, size_t length) {
     printf("\n");
 }
 
-unsigned short calculateChecksum(unsigned char *addr, int len)
-{
+unsigned short calculateChecksum(unsigned char *addr, int len) {
     int sum = 0;
     unsigned short answer = 0;
     unsigned short *wp;
 
-    for (wp = (unsigned short *) addr; len > 1; wp++, len -= 2)
+    for (wp = (unsigned short *) addr; len > 1; wp++, len -= 2) {
         sum += *wp;
-
-    /* Take in an odd byte if present */
-    if (len == 1)
-        {
-        *(unsigned char *) &answer = *(unsigned char *) wp;
+    }
+    if (len == 1) {
+        *(unsigned char *)&answer = *(unsigned char *)wp;
         sum += answer;
-        }
-    // printf("before bitswitch: ");
-    // print_hex((void*)&sum, sizeof(int));
-    sum = (sum >> 16) + (sum & 0xffff);	/* add high 16 to low 16 */
-    // printf("after bitswitch: ");
-    // print_hex((void*)&sum, sizeof(int));
-    sum += (sum >> 16);		/* add carry */
-    // printf("A: ");
-    // print_hex((void*)&sum, sizeof(int));
-    answer = ~sum;		/* truncate to 16 bits */
-    // printf("B: ");
-    // print_hex((void*)&sum, sizeof(int));
+    }
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum += (sum >> 16);
+    answer = ~sum;
     return answer;
 }
 
@@ -88,7 +76,7 @@ void printPingStats(
             pingStats->min,
             pingStats->avg,
             pingStats->max,
-            nsqrt (pingStats->stddev, 0.0005)
+            nsqrt(pingStats->stddev, 0.0005)
         );
     }
     printf(
