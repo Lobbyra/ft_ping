@@ -15,7 +15,9 @@ static struct s_ping craftIcmpPackage(
     ping.header.un.echo.sequence = htons(seqId);
     gettimeofday(&(ping.sentTimestamp), NULL);
     ping.header.checksum = 0;
-    ping.header.checksum = calculateChecksum((unsigned char*)&ping, sizeof(struct s_ping));
+    ping.header.checksum = (
+        calculateChecksum((unsigned char*)&ping, sizeof(struct s_ping))
+    );
     return (ping);
 }
 

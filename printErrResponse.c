@@ -111,9 +111,11 @@ void printErrResponse(
     char* errorMsg;
 
     destIPHdr = (struct iphdr*)buf;
-    srcIPHdr = (struct iphdr*)(buf + 8 + (destIPHdr->ihl << 2));
-    response = (struct icmphdr*)(buf + (destIPHdr->ihl << 2));
-    ogPing = (struct s_ping*)(buf + 8 + (destIPHdr->ihl << 2) + (srcIPHdr->ihl << 2));
+    srcIPHdr = (struct iphdr*)(buf + 8 + (destIPHdr->ihl * 4));
+    response = (struct icmphdr*)(buf + (destIPHdr->ihl * 4));
+    ogPing = (struct s_ping*)(  
+        buf + 8 + (destIPHdr->ihl * 4) + (srcIPHdr->ihl * 4)
+    );
     errorMsg = getErrorStr(response->type, response->code);
     if (ntohs(ogPing->header.un.echo.id) != pid) {
         return;

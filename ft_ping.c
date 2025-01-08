@@ -81,7 +81,7 @@ int ft_ping(bool isVerbose, char* host) {
             seqId++;
             pingState = RECEIVE;
         } else if (pingState == RECEIVE) {
-            receivePacket(isVerbose, destInfo.sockfd, pid, seqId, &pingStats);
+            receivePacket(isVerbose, destInfo.sockfd, pid, &pingStats);
         }
     }
     printPingStats(&pingStats, host, seqId);

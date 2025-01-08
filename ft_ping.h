@@ -60,7 +60,6 @@ int receivePacket(
     const bool isVerbose,
     const int sockfd,
     const pid_t pid,
-    const uint16_t seqId,
     struct PingStats *pingStats
 );
 
