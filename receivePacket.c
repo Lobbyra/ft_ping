@@ -110,20 +110,16 @@ int receivePacket(
     // PROCESSING THE RESPONSE
     if (
         response->header.type == 0 &&
-        ntohs(response->header.un.echo.id) == pid // PID PING RESP FILTERING
+        ntohs(response->header.un.echo.id) == pid && // PID PING RESP FILTERING
+        isChecksumCorrect(response, false) == true
     ) {
-        // CHECKSUM VERIFICATION
-        if (isChecksumCorrect(response, false) == false) {
-            return (1);
-        }
         gettimeofday(&now, NULL);
         printSuccResponse(now, &rAddr, ipHdr, response);
         saveStats(now, response, pingStats);
-    } else {
-        // CHECKSUM VERIFICATION
-        if (isChecksumCorrect(response, true) == false) {
-            return (1);
-        }
+    } else if (
+        ntohs(response->header.un.echo.id) == pid &&
+        isChecksumCorrect(response, true) == true
+    ) {
         printErrResponse(pid, isVerbose, &rAddr, buf, recvStatus);
     }
     return (1);
