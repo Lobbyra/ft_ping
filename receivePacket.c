@@ -86,6 +86,7 @@ int receivePacket(
     struct s_ping *response;
     struct iphdr* ipHdr;
     struct timeval now;
+    pid_t receivedPid;
 
     memset(buf, 0, sizeof(buf));
     // READ THE PING SOCKET
@@ -107,17 +108,19 @@ int receivePacket(
     }
     ipHdr = (struct iphdr*)buf;
     response = (struct s_ping*) (buf + (ipHdr->ihl * 4));
+    receivedPid = response->header.un.echo.id;
+    printf("received id: %d\n", ntohs(response->header.un.echo.id));
     // PROCESSING THE RESPONSE
     if (
         response->header.type == 0 &&
-        ntohs(response->header.un.echo.id) == pid &&
+        (receivedPid == pid || receivedPid == 0) &&
         isChecksumCorrect(response, false) == true
     ) {
         gettimeofday(&now, NULL);
         printSuccResponse(now, &rAddr, ipHdr, response);
         saveStats(now, response, pingStats);
     } else if (
-        ntohs(response->header.un.echo.id) == pid &&
+        (receivedPid == pid || receivedPid == 0) &&
         isChecksumCorrect(response, true) == true
     ) {
         printErrResponse(pid, isVerbose, &rAddr, buf, recvStatus);
