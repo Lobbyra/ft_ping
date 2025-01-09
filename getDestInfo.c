@@ -2,7 +2,7 @@
 
 static int openSocket() {
     int sock;
-    int ttl = 255;
+    int ttl = DEFAULT_TTL;
 
     sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sock == -1) {

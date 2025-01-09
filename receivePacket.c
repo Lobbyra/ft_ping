@@ -108,12 +108,11 @@ int receivePacket(
     }
     ipHdr = (struct iphdr*)buf;
     response = (struct s_ping*) (buf + (ipHdr->ihl * 4));
-    receivedPid = response->header.un.echo.id;
-    printf("received id: %d\n", ntohs(response->header.un.echo.id));
+    receivedPid = htons(response->header.un.echo.id);
     // PROCESSING THE RESPONSE
     if (
         response->header.type == 0 &&
-        (receivedPid == pid || receivedPid == 0) &&
+        receivedPid == pid &&
         isChecksumCorrect(response, false) == true
     ) {
         gettimeofday(&now, NULL);

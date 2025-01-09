@@ -70,6 +70,12 @@ void printPingStats(
     u_int16_t seqId
 ) {
     printf("--- %s ping statistics ---\n", host);
+    printf(
+        "%d packets transmitted, %d packets received, %d%% packet loss\n",
+        seqId,
+        pingStats->receivedPaquet,
+        100 - ((pingStats->receivedPaquet * 100) / (seqId))
+    );
     if (pingStats->receivedPaquet > 0) {
         printf (
             "round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
@@ -79,10 +85,4 @@ void printPingStats(
             nsqrt(pingStats->stddev, 0.0005)
         );
     }
-    printf(
-        "%d packets transmitted, %d packets received, %d%% packet loss\n",
-        seqId,
-        pingStats->receivedPaquet,
-        100 - ((pingStats->receivedPaquet * 100) / (seqId))
-    );
 }
