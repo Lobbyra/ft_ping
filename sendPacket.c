@@ -39,7 +39,7 @@ int sendPacket(
         sizeof(destInfo->addr)
     );
     if (sendRet == -1) {
-        perror("ft_ping: ");
+        perror("ft_ping");
     }
     return (sendRet);
 }

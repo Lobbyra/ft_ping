@@ -23,6 +23,7 @@
 
 #define LOOP_DURATION_IN_SEC 1
 #define DEFAULT_TTL 255
+#define NITEMS(a) sizeof(a)/sizeof((a)[0])
 
 struct PingStats {
     int receivedPaquet;

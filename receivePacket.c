@@ -42,14 +42,20 @@ static void saveStats(
     );
 }
 
-static bool isChecksumCorrect(struct s_ping *response) {
+static bool isChecksumCorrect(struct s_ping *response, bool onlyHeader) {
     unsigned short checksum;
     const unsigned checksumSave = response->header.checksum;
+    size_t sumSize;
 
+    if (onlyHeader == true) {
+        sumSize = sizeof(struct icmphdr);
+    } else {
+        sumSize = sizeof(struct s_ping);
+    }
     // The ping struct checksum must be computed 0 as checksum
     response->header.checksum = 0;
     checksum = (
-        calculateChecksum((unsigned char*)&(*response), sizeof(struct s_ping))
+        calculateChecksum((unsigned char*)&(*response), sumSize)
     );
     response->header.checksum = checksumSave;
     if (checksum != checksumSave) {
@@ -91,6 +97,7 @@ int receivePacket(
         (struct sockaddr*)&rAddr,
         &rAddrLen
     );
+
     // READING FAIL MANAGEMENT
     if (recvStatus == -1) {
         if (errno != EINTR) {
@@ -100,19 +107,23 @@ int receivePacket(
     }
     ipHdr = (struct iphdr*)buf;
     response = (struct s_ping*) (buf + (ipHdr->ihl * 4));
-    // CHECKSUM VERIFICATION
-    if (isChecksumCorrect(response) == false) {
-        return (1);
-    }
     // PROCESSING THE RESPONSE
     if (
         response->header.type == 0 &&
         ntohs(response->header.un.echo.id) == pid // PID PING RESP FILTERING
     ) {
+        // CHECKSUM VERIFICATION
+        if (isChecksumCorrect(response, false) == false) {
+            return (1);
+        }
         gettimeofday(&now, NULL);
         printSuccResponse(now, &rAddr, ipHdr, response);
         saveStats(now, response, pingStats);
     } else {
+        // CHECKSUM VERIFICATION
+        if (isChecksumCorrect(response, true) == false) {
+            return (1);
+        }
         printErrResponse(pid, isVerbose, &rAddr, buf, recvStatus);
     }
     return (1);

@@ -84,14 +84,14 @@ struct icmp_code_descr icmp_code_descr[] = {
 };
 
 char* getErrorStr(uint8_t type, uint8_t code) {
-    int i;
+    struct icmp_code_descr* i;
 
-    for(i = 0; i < (int)sizeof(icmp_code_descr); i++) {
+    for(i = icmp_code_descr; i < icmp_code_descr + NITEMS(icmp_code_descr); i++) {
         if (
-            icmp_code_descr[i].code == code &&
-            icmp_code_descr[i].type == type
+            i->code == code &&
+            i->type == type
         ) {
-            return (icmp_code_descr[i].diag);
+            return (i->diag);
         }
     }
     return (NULL);
@@ -113,7 +113,7 @@ void printErrResponse(
     destIPHdr = (struct iphdr*)buf;
     srcIPHdr = (struct iphdr*)(buf + 8 + (destIPHdr->ihl * 4));
     response = (struct icmphdr*)(buf + (destIPHdr->ihl * 4));
-    ogPing = (struct s_ping*)(  
+    ogPing = (struct s_ping*)(
         buf + 8 + (destIPHdr->ihl * 4) + (srcIPHdr->ihl * 4)
     );
     errorMsg = getErrorStr(response->type, response->code);
