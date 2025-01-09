@@ -110,7 +110,7 @@ int receivePacket(
     // PROCESSING THE RESPONSE
     if (
         response->header.type == 0 &&
-        ntohs(response->header.un.echo.id) == pid && // PID PING RESP FILTERING
+        ntohs(response->header.un.echo.id) == pid &&
         isChecksumCorrect(response, false) == true
     ) {
         gettimeofday(&now, NULL);
